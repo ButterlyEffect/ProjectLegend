@@ -1,0 +1,137 @@
+[gd_scene format=3 uid="uid://btestlevel001"]
+
+[ext_resource type="PackedScene" uid="uid://bplayer001" path="res://scenes/player/player.tscn" id="1"]
+[ext_resource type="Script" uid="uid://hsk2rqmufqb" path="res://scenes/player/test_level.gd" id="2"]
+
+[sub_resource type="RectangleShape2D" id="ground_shape"]
+size = Vector2(480, 16)
+
+[sub_resource type="RectangleShape2D" id="wall_shape"]
+size = Vector2(16, 200)
+
+[sub_resource type="RectangleShape2D" id="platform_shape"]
+size = Vector2(64, 8)
+
+[sub_resource type="RectangleShape2D" id="small_platform"]
+size = Vector2(32, 8)
+
+[sub_resource type="RectangleShape2D" id="kill_zone_shape"]
+size = Vector2(600, 16)
+
+[node name="TestLevel" type="Node2D" unique_id=498780084]
+script = ExtResource("2")
+
+[node name="Player" parent="." unique_id=1696341050 instance=ExtResource("1")]
+position = Vector2(80, 220)
+
+[node name="Ground" type="StaticBody2D" parent="." unique_id=729525517]
+position = Vector2(240, 262)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground" unique_id=1787949096]
+shape = SubResource("ground_shape")
+
+[node name="GroundVisual" type="ColorRect" parent="Ground" unique_id=57219215]
+offset_left = -240.0
+offset_top = -8.0
+offset_right = 240.0
+offset_bottom = 8.0
+color = Color(0.35, 0.25, 0.15, 1)
+
+[node name="LeftWall" type="StaticBody2D" parent="." unique_id=1531842219]
+position = Vector2(-8, 162)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftWall" unique_id=1758926128]
+shape = SubResource("wall_shape")
+
+[node name="WallVisual" type="ColorRect" parent="LeftWall" unique_id=950880715]
+offset_left = -8.0
+offset_top = -100.0
+offset_right = 8.0
+offset_bottom = 100.0
+color = Color(0.3, 0.22, 0.12, 1)
+
+[node name="RightWall" type="StaticBody2D" parent="." unique_id=58143800]
+position = Vector2(488, 162)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightWall" unique_id=1765181042]
+shape = SubResource("wall_shape")
+
+[node name="WallVisual" type="ColorRect" parent="RightWall" unique_id=929493692]
+offset_left = -8.0
+offset_top = -100.0
+offset_right = 8.0
+offset_bottom = 100.0
+color = Color(0.3, 0.22, 0.12, 1)
+
+[node name="Platform1" type="StaticBody2D" parent="." unique_id=1600670039]
+position = Vector2(160, 210)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1" unique_id=1907429312]
+shape = SubResource("platform_shape")
+
+[node name="Visual" type="ColorRect" parent="Platform1" unique_id=282672823]
+offset_left = -32.0
+offset_top = -4.0
+offset_right = 32.0
+offset_bottom = 4.0
+color = Color(0.4, 0.5, 0.25, 1)
+
+[node name="Platform2" type="StaticBody2D" parent="." unique_id=731071210]
+position = Vector2(300, 180)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2" unique_id=1353248898]
+shape = SubResource("platform_shape")
+
+[node name="Visual" type="ColorRect" parent="Platform2" unique_id=1554364537]
+offset_left = -32.0
+offset_top = -4.0
+offset_right = 32.0
+offset_bottom = 4.0
+color = Color(0.4, 0.5, 0.25, 1)
+
+[node name="Platform3" type="StaticBody2D" parent="." unique_id=1423604961]
+position = Vector2(200, 140)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3" unique_id=967809691]
+shape = SubResource("small_platform")
+
+[node name="Visual" type="ColorRect" parent="Platform3" unique_id=1083094515]
+offset_left = -16.0
+offset_top = -4.0
+offset_right = 16.0
+offset_bottom = 4.0
+color = Color(0.4, 0.5, 0.25, 1)
+
+[node name="HighPlatform" type="StaticBody2D" parent="." unique_id=840828923]
+position = Vector2(380, 110)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HighPlatform" unique_id=844429993]
+shape = SubResource("platform_shape")
+
+[node name="Visual" type="ColorRect" parent="HighPlatform" unique_id=1999725706]
+offset_left = -32.0
+offset_top = -4.0
+offset_right = 32.0
+offset_bottom = 4.0
+color = Color(0.4, 0.5, 0.25, 1)
+
+[node name="WallJumpPillar" type="StaticBody2D" parent="." unique_id=1989770793]
+position = Vector2(420, 190)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallJumpPillar" unique_id=1320515561]
+shape = SubResource("wall_shape")
+
+[node name="Visual" type="ColorRect" parent="WallJumpPillar" unique_id=869905787]
+offset_left = -8.0
+offset_top = -100.0
+offset_right = 8.0
+offset_bottom = 100.0
+color = Color(0.3, 0.4, 0.2, 1)
+
+[node name="KillZone" type="Area2D" parent="." unique_id=5374452]
+position = Vector2(240, 310)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="KillZone" unique_id=197953969]
+shape = SubResource("kill_zone_shape")

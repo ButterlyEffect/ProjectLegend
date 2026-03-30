@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Godot 4 generated files
+game/.godot/
+*.import
+
+# Export builds
+export/
+build/
+
+# IDE
+.cursor/
