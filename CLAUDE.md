@@ -28,6 +28,13 @@
 - Controller-first input, 30fps render, 60Hz physics
 - Iterative development — prove the feel, then expand
 
+## Workflow: Multi-Laptop Sync
+- **CLAUDE.md is the single source of truth** for session state
+- When Simon says "park it" / "push up" / "done for now" → update CLAUDE.md status before committing
+- When starting a new session → CLAUDE.md auto-loads, say "where did we leave off?" to confirm
+- Always commit + push before switching laptops
+- Always git pull when starting on the other laptop
+
 ## Architecture Quick Reference
 - GDScript only, Godot 4.x
 - Signals between scenes, direct calls within composed scenes, shared Resources for state
