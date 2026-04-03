@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://bplayer001" path="res://scenes/player/player.tscn" id="1"]
 [ext_resource type="Script" uid="uid://hsk2rqmufqb" path="res://scenes/player/test_level.gd" id="2"]
+[ext_resource type="PackedScene" uid="uid://bdummytarget001" path="res://scenes/enemies/dummy_target.tscn" id="3"]
 
 [sub_resource type="RectangleShape2D" id="ground_shape"]
 size = Vector2(480, 16)
@@ -127,6 +128,15 @@ offset_top = -100.0
 offset_right = 8.0
 offset_bottom = 100.0
 color = Color(0.3, 0.4, 0.2, 1)
+
+[node name="Target1" parent="." instance=ExtResource("3")]
+position = Vector2(200, 254)
+
+[node name="Target2" parent="." instance=ExtResource("3")]
+position = Vector2(320, 254)
+
+[node name="Target3" parent="." instance=ExtResource("3")]
+position = Vector2(160, 202)
 
 [node name="KillZone" type="Area2D" parent="." unique_id=5374452]
 position = Vector2(240, 310)

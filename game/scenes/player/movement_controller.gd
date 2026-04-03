@@ -9,6 +9,8 @@ signal slide_ended
 signal wall_slide_started
 signal player_died
 signal respawned
+signal attack_started
+signal attack_hit(target: Node2D)
 
 # --- States ---
 const STATE_IDLE := &"idle"
@@ -44,9 +46,18 @@ const STATE_WALL_JUMP := &"wall_jump"
 @export var slide_duration: float = 0.35
 @export var slide_cooldown: float = 0.1
 
+@export_group("Attack")
+@export var attack_damage: int = 1
+@export var attack_hitbox_frames: int = 4  # Active window at 60Hz
+@export var attack_cooldown_frames: int = 12  # ~200ms between attacks
+
 # --- Node references ---
 @onready var sprite: ColorRect = $Sprite2D
 @onready var blade_pivot: Node2D = $BladePivot
+@onready var throw_physics: Node = $BladePivot/Blade/ThrowPhysics
+@onready var attack_hitbox: Area2D = $AttackHitbox
+@onready var attack_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
 
 # --- Private state ---
 var _current_state: StringName = STATE_IDLE
@@ -58,6 +69,10 @@ var _slide_cooldown_timer: float = 0.0
 var _is_invincible: bool = false
 var _last_safe_position: Vector2 = Vector2.ZERO
 var _wall_direction: int = 0  # -1 left, 1 right, 0 none
+var _is_attacking: bool = false
+var _attack_timer: int = 0
+var _attack_cooldown_timer: int = 0
+var _attack_targets_hit: Array[Node2D] = []  # Prevent multi-hit per swing
 
 
 func _ready() -> void:
@@ -67,6 +82,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_detect_wall()
+	_try_attack()
+	_update_attack()
 
 	match _current_state:
 		STATE_IDLE:
@@ -221,6 +238,45 @@ func _exit_state(state: StringName) -> void:
 			_slide_cooldown_timer = slide_cooldown
 
 
+# --- Attack overlay ---
+
+func _try_attack() -> void:
+	if not Input.is_action_just_pressed("attack"):
+		return
+	if _is_attacking or _attack_cooldown_timer > 0:
+		return
+	if not throw_physics.is_held():
+		return
+	_is_attacking = true
+	_attack_timer = attack_hitbox_frames
+	_attack_targets_hit.clear()
+	# Position hitbox on facing side
+	var offset_x: float = 8.0 if _facing_right else -8.0
+	attack_shape.position = Vector2(offset_x, -7.0)
+	attack_hitbox.monitoring = true
+	animation_player.play("attack_swing")
+	attack_started.emit()
+
+
+func _update_attack() -> void:
+	if not _is_attacking:
+		return
+	# Check for overlapping hurtboxes
+	for area in attack_hitbox.get_overlapping_areas():
+		if area in _attack_targets_hit:
+			continue
+		var target: Node = area.get_parent()
+		if target.has_method("take_damage"):
+			target.take_damage(attack_damage)
+			_attack_targets_hit.append(area)
+			attack_hit.emit(target)
+	_attack_timer -= 1
+	if _attack_timer <= 0:
+		_is_attacking = false
+		attack_hitbox.monitoring = false
+		_attack_cooldown_timer = attack_cooldown_frames
+
+
 # --- Helpers ---
 
 func _get_move_input() -> float:
@@ -285,6 +341,8 @@ func _update_timers(delta: float) -> void:
 		_jump_buffer_timer -= 1
 	if _slide_cooldown_timer > 0.0:
 		_slide_cooldown_timer -= delta
+	if _attack_cooldown_timer > 0:
+		_attack_cooldown_timer -= 1
 
 
 func _update_safe_position() -> void:
@@ -311,6 +369,15 @@ func apply_momentum(external_velocity: Vector2) -> void:
 		_change_state(STATE_FALL)
 
 
+func apply_knockback(force: Vector2) -> void:
+	## Called by PlayerHealth when taking damage.
+	velocity = force
+	if _current_state == STATE_SLIDE:
+		_slide_timer = 0.0
+		slide_ended.emit()
+	_change_state(STATE_FALL)
+
+
 func is_sliding() -> bool:
 	return _current_state == STATE_SLIDE
 
@@ -321,3 +388,7 @@ func is_invincible() -> bool:
 
 func get_facing_direction() -> Vector2:
 	return Vector2.RIGHT if _facing_right else Vector2.LEFT
+
+
+func is_attacking() -> bool:
+	return _is_attacking

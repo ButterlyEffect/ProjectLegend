@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://bplayer001"]
+[gd_scene load_steps=10 format=3 uid="uid://bplayer001"]
 
 [ext_resource type="Script" path="res://scenes/player/movement_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scenes/player/blade/throw_physics.gd" id="2"]
 [ext_resource type="Script" path="res://scenes/player/blade/teleport_executor.gd" id="3"]
 [ext_resource type="Script" path="res://scenes/player/blade/companion_state.gd" id="4"]
+[ext_resource type="Script" path="res://scenes/player/player_health.gd" id="5"]
 
 [sub_resource type="RectangleShape2D" id="player_collision"]
 size = Vector2(8, 14)
@@ -13,6 +14,34 @@ size = Vector2(4, 4)
 
 [sub_resource type="RectangleShape2D" id="clearance_shape"]
 size = Vector2(8, 14)
+
+[sub_resource type="RectangleShape2D" id="attack_hitbox_shape"]
+size = Vector2(12, 10)
+
+[sub_resource type="RectangleShape2D" id="player_hurtbox_shape"]
+size = Vector2(8, 14)
+
+[sub_resource type="Animation" id="attack_swing"]
+resource_name = "attack_swing"
+length = 0.067
+step = 0.0167
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.033, 0.067),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 1), Color(0.2, 0.8, 0.3, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="attack_library"]
+_data = {
+&"attack_swing": SubResource("attack_swing")
+}
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
@@ -61,6 +90,33 @@ script = ExtResource("3")
 
 [node name="CompanionState" type="Node2D" parent="BladePivot/Blade"]
 script = ExtResource("4")
+
+[node name="AttackHitbox" type="Area2D" parent="."]
+collision_layer = 8
+collision_mask = 16
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
+position = Vector2(8, -7)
+shape = SubResource("attack_hitbox_shape")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("attack_library")
+}
+
+[node name="PlayerHealth" type="Node2D" parent="."]
+script = ExtResource("5")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 32
+collision_mask = 0
+monitorable = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+position = Vector2(0, -7)
+shape = SubResource("player_hurtbox_shape")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -7)

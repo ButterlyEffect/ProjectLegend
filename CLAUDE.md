@@ -11,9 +11,9 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 in progress. Stories 1.1-1.5 functional in prototype.
-- **Next:** Stories 1.6 (blade recall), 1.7 (movement-teleport chaining), 1.8 (out-of-bounds respawn), 1.9 (range indicator)
-- **After that:** Epic 2 (Combat & Parry)
+- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1 (blade melee attacks) and 2.2 (player health & damage) done.
+- **Next:** Story 2.3 (Frame-Precise Parry)
+- **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code
 - Located in `game/` subfolder (Godot 4.x project)
