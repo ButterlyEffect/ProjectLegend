@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3 uid="uid://bplayer001"]
+[gd_scene load_steps=11 format=3 uid="uid://bplayer001"]
 
 [ext_resource type="Script" path="res://scenes/player/movement_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scenes/player/blade/throw_physics.gd" id="2"]
 [ext_resource type="Script" path="res://scenes/player/blade/teleport_executor.gd" id="3"]
 [ext_resource type="Script" path="res://scenes/player/blade/companion_state.gd" id="4"]
 [ext_resource type="Script" path="res://scenes/player/player_health.gd" id="5"]
+[ext_resource type="Script" path="res://scenes/player/parry_subsystem.gd" id="6"]
 
 [sub_resource type="RectangleShape2D" id="player_collision"]
 size = Vector2(8, 14)
@@ -20,6 +21,9 @@ size = Vector2(12, 10)
 
 [sub_resource type="RectangleShape2D" id="player_hurtbox_shape"]
 size = Vector2(8, 14)
+
+[sub_resource type="RectangleShape2D" id="parry_detector_shape"]
+size = Vector2(16, 18)
 
 [sub_resource type="Animation" id="attack_swing"]
 resource_name = "attack_swing"
@@ -117,6 +121,19 @@ monitorable = true
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
 position = Vector2(0, -7)
 shape = SubResource("player_hurtbox_shape")
+
+[node name="ParryDetector" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 64
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ParryDetector"]
+position = Vector2(0, -7)
+shape = SubResource("parry_detector_shape")
+
+[node name="ParrySubsystem" type="Node2D" parent="."]
+script = ExtResource("6")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -7)

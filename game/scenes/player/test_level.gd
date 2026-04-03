@@ -7,13 +7,16 @@ extends Node2D
 @onready var teleport_executor: Node = $Player/BladePivot/Blade/TeleportExecutor
 @onready var player_health: Node = $Player/PlayerHealth
 @onready var kill_zone: Area2D = $KillZone
+@onready var moving_platform: AnimatableBody2D = $MovingPlatform
 
 var _range_indicator: Line2D
+var _platform_tween: Tween
 
 
 func _ready() -> void:
 	if kill_zone:
 		kill_zone.body_entered.connect(_on_kill_zone_entered)
+	_start_platform_loop()
 	# Connect blade signals for debug feedback
 	if throw_physics:
 		throw_physics.blade_embedded.connect(_on_blade_embedded)
@@ -105,3 +108,11 @@ func _on_player_damaged(amount: int) -> void:
 func _on_player_died() -> void:
 	print("Player died! Respawning...")
 	throw_physics.recall()
+
+
+func _start_platform_loop() -> void:
+	if not moving_platform:
+		return
+	_platform_tween = create_tween().set_loops().set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_platform_tween.tween_property(moving_platform, "position:x", 350.0, 2.0).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_platform_tween.tween_property(moving_platform, "position:x", 80.0, 2.0).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)

@@ -58,6 +58,7 @@ const STATE_WALL_JUMP := &"wall_jump"
 @onready var attack_hitbox: Area2D = $AttackHitbox
 @onready var attack_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+@onready var parry_subsystem: Node2D = $ParrySubsystem
 
 # --- Private state ---
 var _current_state: StringName = STATE_IDLE
@@ -247,6 +248,8 @@ func _try_attack() -> void:
 		return
 	if not throw_physics.is_held():
 		return
+	if parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+		return
 	_is_attacking = true
 	_attack_timer = attack_hitbox_frames
 	_attack_targets_hit.clear()
@@ -314,6 +317,8 @@ func _try_jump() -> bool:
 
 func _try_slide() -> bool:
 	if Input.is_action_just_pressed("slide") and is_on_floor() and _slide_cooldown_timer <= 0.0:
+		if parry_subsystem.is_in_recovery():
+			return false
 		_change_state(STATE_SLIDE)
 		return true
 	return false

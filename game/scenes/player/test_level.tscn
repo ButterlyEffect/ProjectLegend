@@ -19,6 +19,9 @@ size = Vector2(32, 8)
 [sub_resource type="RectangleShape2D" id="kill_zone_shape"]
 size = Vector2(600, 16)
 
+[sub_resource type="RectangleShape2D" id="moving_platform_shape"]
+size = Vector2(48, 8)
+
 [node name="TestLevel" type="Node2D" unique_id=498780084]
 script = ExtResource("2")
 
@@ -137,6 +140,21 @@ position = Vector2(320, 254)
 
 [node name="Target3" parent="." instance=ExtResource("3")]
 position = Vector2(160, 202)
+
+[node name="MovingPlatform" type="AnimatableBody2D" parent="."]
+position = Vector2(80, 190)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MovingPlatform"]
+shape = SubResource("moving_platform_shape")
+
+[node name="Visual" type="ColorRect" parent="MovingPlatform"]
+offset_left = -24.0
+offset_top = -4.0
+offset_right = 24.0
+offset_bottom = 4.0
+color = Color(0.3, 0.6, 0.8, 1)
 
 [node name="KillZone" type="Area2D" parent="." unique_id=5374452]
 position = Vector2(240, 310)

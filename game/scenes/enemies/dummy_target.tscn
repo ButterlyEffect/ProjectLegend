@@ -9,7 +9,7 @@ size = Vector2(10, 14)
 size = Vector2(12, 16)
 
 [sub_resource type="RectangleShape2D" id="damage_zone_shape"]
-size = Vector2(14, 16)
+size = Vector2(28, 12)
 
 [node name="DummyTarget" type="StaticBody2D"]
 collision_layer = 1
@@ -38,10 +38,19 @@ position = Vector2(0, -7)
 shape = SubResource("hurtbox_shape")
 
 [node name="DamageZone" type="Area2D" parent="."]
-collision_layer = 0
+collision_layer = 64
 collision_mask = 32
-monitoring = true
+monitoring = false
+monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DamageZone"]
-position = Vector2(0, -7)
+position = Vector2(-20, -7)
 shape = SubResource("damage_zone_shape")
+
+[node name="AttackArm" type="ColorRect" parent="."]
+visible = false
+offset_left = -34.0
+offset_top = -13.0
+offset_right = -5.0
+offset_bottom = -1.0
+color = Color(1.0, 0.15, 0.15, 0.9)

@@ -11,8 +11,8 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1 (blade melee attacks) and 2.2 (player health & damage) done.
-- **Next:** Story 2.3 (Frame-Precise Parry)
+- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.3 done.
+- **Next:** Story 2.4 (Combo Multiplier)
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code
@@ -30,7 +30,7 @@
 
 ## Workflow: Multi-Laptop Sync
 - **CLAUDE.md is the single source of truth** for session state
-- When Simon says "park it" / "push up" / "done for now" → update CLAUDE.md status before committing
+- When Simon says "park it" / "push up" / "done for now" → update CLAUDE.md status + sync Notion Sprint Tracker statuses before committing
 - When starting a new session → CLAUDE.md auto-loads, say "where did we leave off?" to confirm
 - Always commit + push before switching laptops
 - Always git pull when starting on the other laptop
