@@ -270,7 +270,9 @@ func _update_attack() -> void:
 			continue
 		var target: Node = area.get_parent()
 		if target.has_method("take_damage"):
-			target.take_damage(attack_damage)
+			var combo: int = parry_subsystem.get_combo_count()
+			var multiplier: int = max(combo, 1)
+			target.take_damage(attack_damage * multiplier)
 			_attack_targets_hit.append(area)
 			attack_hit.emit(target)
 	_attack_timer -= 1

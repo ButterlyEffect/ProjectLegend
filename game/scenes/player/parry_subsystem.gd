@@ -36,7 +36,10 @@ var _magic_stock: int = 0
 var _combo_count: int = 0
 var _combo_window_timer: int = 0
 var _whiff_flash_timer: int = 0
-@export var combo_window_frames: int = 120  # ~2s at 60Hz to chain parries
+@export_group("Combo")
+@export var combo_window_frames: int = 120  # ~2s at 60Hz for first chain
+@export var combo_window_shrink: int = 30   # Frames lost per combo tier (~0.5s)
+@export var max_combo: int = 3              # Cap — parries beyond this don't increase
 
 
 func _ready() -> void:
@@ -51,10 +54,9 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	_update_combo_timer()
-
 	match _state:
 		ParryState.INACTIVE:
+			_update_combo_timer()
 			_try_parry()
 		ParryState.WINDOW_OPEN:
 			_update_parry_window()
@@ -72,6 +74,7 @@ func _try_parry() -> void:
 	_state = ParryState.WINDOW_OPEN
 	_window_timer = parry_window_frames
 	_parry_detector.monitoring = true
+	_player._is_invincible = true  # Protect during parry window
 
 
 func _update_parry_window() -> void:
@@ -89,12 +92,15 @@ func _on_parry_success() -> void:
 	_parry_detector.monitoring = false
 	_state = ParryState.SLOWMO
 	_slowmo_timer = slowmo_duration_frames
-	# Combo tracking
-	if _combo_window_timer > 0:
+	# Combo tracking — shrinking window, capped at max
+	var _old_timer: int = _combo_window_timer
+	if _combo_window_timer > 0 and _combo_count < max_combo:
 		_combo_count += 1
-	else:
+	elif _combo_window_timer <= 0:
 		_combo_count = 1
-	_combo_window_timer = combo_window_frames
+	# Window gets tighter each tier: 120 → 90 → 60 → 30
+	_combo_window_timer = max(combo_window_frames - (_combo_count - 1) * combo_window_shrink, combo_window_shrink)
+	print("DEBUG combo: old_timer=", _old_timer, " count=", _combo_count, " new_timer=", _combo_window_timer)
 	# Grant brief invincibility so contact damage doesn't hit
 	_player._is_invincible = true
 	# Slow-mo
@@ -108,11 +114,12 @@ func _on_parry_success() -> void:
 	# Stock magic
 	_magic_stock += magic_per_parry
 	parry_succeeded.emit(magic_per_parry, _combo_count)
-	print("PARRY! Magic: ", _magic_stock, " Combo: ", _combo_count)
+	print("PARRY! Magic: ", _magic_stock, " Combo: ", _combo_count, " WindowWas: ", _combo_window_timer)
 
 
 func _on_parry_whiff() -> void:
 	_parry_detector.monitoring = false
+	_player._is_invincible = false  # Vulnerable during recovery
 	_state = ParryState.RECOVERY
 	_recovery_timer = recovery_frames
 	_whiff_flash_timer = 0
@@ -155,6 +162,7 @@ func _update_combo_timer() -> void:
 		_combo_window_timer -= 1
 		if _combo_window_timer <= 0:
 			_combo_count = 0
+			print("COMBO EXPIRED")
 
 
 func _is_enemy_attack(area: Area2D) -> bool:
@@ -183,3 +191,7 @@ func spend_magic(amount: int) -> bool:
 		_magic_stock -= amount
 		return true
 	return false
+
+
+func get_combo_count() -> int:
+	return _combo_count
