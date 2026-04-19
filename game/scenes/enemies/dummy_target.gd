@@ -117,10 +117,33 @@ func _enter_phase(phase: AttackPhase) -> void:
 func take_damage(amount: int) -> void:
 	_current_hp -= amount
 	damaged.emit(amount)
-	print("DummyTarget hit! HP: ", _current_hp, "/", max_hp)
+	_spawn_damage_number(amount)
 	_flash_hit()
 	if _current_hp <= 0:
 		_die()
+
+
+func _spawn_damage_number(amount: int) -> void:
+	var label := Label.new()
+	label.text = str(amount)
+	label.z_index = 100
+	var color := Color.WHITE
+	if amount >= 3:
+		color = Color(1.0, 0.35, 0.2, 1.0)
+	elif amount >= 2:
+		color = Color(1.0, 0.85, 0.3, 1.0)
+	label.modulate = color
+	label.add_theme_font_size_override("font_size", 14 + amount * 4)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	var jitter := randf_range(-10.0, 10.0)
+	label.position = global_position + Vector2(jitter - 6, -36)
+	get_tree().current_scene.add_child(label)
+	var rise_to: float = label.position.y - 28
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(label, "position:y", rise_to, 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "modulate:a", 0.0, 0.5).set_delay(0.2)
+	tween.chain().tween_callback(label.queue_free)
 
 
 func _flash_hit() -> void:

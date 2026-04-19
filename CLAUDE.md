@@ -11,11 +11,8 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.3 done. Story 2.4 WIP.
-- **Next:** Story 2.4 (Combo Multiplier) — code written, debugging two issues:
-  1. Combo counter always reads 1 — `_combo_window_timer` drains to 0 between parries. Added COMBO EXPIRED debug print, need to observe when it fires.
-  2. Damage during parry — fix applied (invincible during WINDOW_OPEN), untested.
-  3. Debug prints in parry_subsystem.gd — REMOVE when bugs fixed.
+- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.4 done.
+- **Next:** Story 2.5 (Magic Energy & Enhanced Attacks) — magic stocking already wired (`_magic_stock` increments on every parry); need the *spend* half: hold-attack input fires enhanced swing, consumes magic, distinct visual (blade glow + screen flash), falls back to normal attack if no magic.
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code

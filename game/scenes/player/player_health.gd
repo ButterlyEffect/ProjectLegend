@@ -44,6 +44,10 @@ func take_damage(amount: int, damage_source_position: Vector2) -> void:
 	current_hp = max(current_hp - amount, 0)
 	player_damaged.emit(amount)
 	print("Player hit! HP: ", current_hp, "/", max_hp)
+	# Break the parry combo — flow state is interrupted by taking damage
+	var parry: Node = _player.get_node_or_null("ParrySubsystem")
+	if parry and parry.has_method("reset_combo"):
+		parry.reset_combo()
 	# i-frames
 	_iframes_timer = iframes_duration
 	_flash_timer = flash_interval

@@ -37,8 +37,7 @@ var _combo_count: int = 0
 var _combo_window_timer: int = 0
 var _whiff_flash_timer: int = 0
 @export_group("Combo")
-@export var combo_window_frames: int = 120  # ~2s at 60Hz for first chain
-@export var combo_window_shrink: int = 30   # Frames lost per combo tier (~0.5s)
+@export var combo_window_frames: int = 180  # ~3s at 60Hz — refills on every successful parry
 @export var max_combo: int = 3              # Cap — parries beyond this don't increase
 
 
@@ -92,15 +91,12 @@ func _on_parry_success() -> void:
 	_parry_detector.monitoring = false
 	_state = ParryState.SLOWMO
 	_slowmo_timer = slowmo_duration_frames
-	# Combo tracking — shrinking window, capped at max
-	var _old_timer: int = _combo_window_timer
+	# Combo tracking — window refills on every successful parry, capped at max_combo
 	if _combo_window_timer > 0 and _combo_count < max_combo:
 		_combo_count += 1
 	elif _combo_window_timer <= 0:
 		_combo_count = 1
-	# Window gets tighter each tier: 120 → 90 → 60 → 30
-	_combo_window_timer = max(combo_window_frames - (_combo_count - 1) * combo_window_shrink, combo_window_shrink)
-	print("DEBUG combo: old_timer=", _old_timer, " count=", _combo_count, " new_timer=", _combo_window_timer)
+	_combo_window_timer = combo_window_frames
 	# Grant brief invincibility so contact damage doesn't hit
 	_player._is_invincible = true
 	# Slow-mo
@@ -114,7 +110,6 @@ func _on_parry_success() -> void:
 	# Stock magic
 	_magic_stock += magic_per_parry
 	parry_succeeded.emit(magic_per_parry, _combo_count)
-	print("PARRY! Magic: ", _magic_stock, " Combo: ", _combo_count, " WindowWas: ", _combo_window_timer)
 
 
 func _on_parry_whiff() -> void:
@@ -126,7 +121,7 @@ func _on_parry_whiff() -> void:
 	# Dim player sprite to show vulnerability
 	_player_sprite.color = Color(0.4, 0.4, 0.4, 1.0)
 	parry_failed.emit()
-	print("Parry whiffed!")
+	reset_combo()
 
 
 func _update_slowmo() -> void:
@@ -162,7 +157,6 @@ func _update_combo_timer() -> void:
 		_combo_window_timer -= 1
 		if _combo_window_timer <= 0:
 			_combo_count = 0
-			print("COMBO EXPIRED")
 
 
 func _is_enemy_attack(area: Area2D) -> bool:
@@ -195,3 +189,27 @@ func spend_magic(amount: int) -> bool:
 
 func get_combo_count() -> int:
 	return _combo_count
+
+
+func reset_combo() -> void:
+	if _combo_count > 1:
+		_spawn_combo_broken_label(_combo_count)
+	_combo_count = 0
+	_combo_window_timer = 0
+
+
+func _spawn_combo_broken_label(broken_at: int) -> void:
+	var label := Label.new()
+	label.text = "COMBO BROKEN x" + str(broken_at)
+	label.z_index = 100
+	label.modulate = Color(1.0, 0.25, 0.25, 1.0)
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.position = _player.global_position + Vector2(-44, -44)
+	get_tree().current_scene.add_child(label)
+	var rise_to: float = label.position.y - 24
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(label, "position:y", rise_to, 0.9).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.3)
+	tween.chain().tween_callback(label.queue_free)
