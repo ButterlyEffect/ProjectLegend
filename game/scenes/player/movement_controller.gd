@@ -48,8 +48,13 @@ const STATE_WALL_JUMP := &"wall_jump"
 
 @export_group("Attack")
 @export var attack_damage: int = 1
-@export var attack_hitbox_frames: int = 4  # Active window at 60Hz
+@export var attack_hitbox_frames: int = 6  # Active window at 60Hz
 @export var attack_cooldown_frames: int = 12  # ~200ms between attacks
+
+@export_group("Charged Attack")
+@export var charge_threshold_frames: int = 15  # ~250ms hold to unlock enhanced swing
+@export var enhanced_attack_damage_multiplier: int = 2
+@export var enhanced_attack_magic_cost: int = 1
 
 # --- Node references ---
 @onready var sprite: ColorRect = $Sprite2D
@@ -59,6 +64,8 @@ const STATE_WALL_JUMP := &"wall_jump"
 @onready var attack_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var parry_subsystem: Node2D = $ParrySubsystem
+@onready var blade_visual: ColorRect = $BladePivot/Blade/ThrowPhysics/BladeVisual
+@onready var player_sprite: ColorRect = $Sprite2D
 
 # --- Private state ---
 var _current_state: StringName = STATE_IDLE
@@ -74,16 +81,24 @@ var _is_attacking: bool = false
 var _attack_timer: int = 0
 var _attack_cooldown_timer: int = 0
 var _attack_targets_hit: Array[Node2D] = []  # Prevent multi-hit per swing
+var _is_charging: bool = false
+var _attack_charge_timer: int = 0
+var _is_enhanced_attack: bool = false
+var _blade_original_color: Color
+var _player_original_color: Color
 
 
 func _ready() -> void:
 	_last_safe_position = global_position
+	_blade_original_color = blade_visual.color
+	_player_original_color = player_sprite.color
 
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_detect_wall()
 	_try_attack()
+	_update_charging()
 	_update_attack()
 
 	match _current_state:
@@ -253,23 +268,105 @@ func _exit_state(state: StringName) -> void:
 # --- Attack overlay ---
 
 func _try_attack() -> void:
-	if not Input.is_action_just_pressed("attack"):
-		return
+	# Press: begin charging if eligible
+	if Input.is_action_just_pressed("attack") and _can_start_attack():
+		_is_charging = true
+		_attack_charge_timer = 0
+	# Release: fire normal or enhanced based on charge + magic
+	if _is_charging and Input.is_action_just_released("attack"):
+		var charged: bool = _attack_charge_timer >= charge_threshold_frames
+		var has_magic: bool = parry_subsystem.get_magic_stock() >= enhanced_attack_magic_cost
+		var enhanced: bool = charged and has_magic
+		if enhanced:
+			parry_subsystem.spend_magic(enhanced_attack_magic_cost)
+		_is_charging = false
+		_attack_charge_timer = 0
+		_start_attack(enhanced)
+
+
+func _can_start_attack() -> bool:
 	if _is_attacking or _attack_cooldown_timer > 0:
-		return
+		return false
 	if not throw_physics.is_held():
-		return
+		return false
 	if parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+		return false
+	return true
+
+
+func _update_charging() -> void:
+	if not _is_charging:
 		return
+	# Cancel charge if conditions break (blade thrown, parry initiated)
+	if not throw_physics.is_held() or parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+		_is_charging = false
+		_attack_charge_timer = 0
+		blade_visual.color = _blade_original_color
+		player_sprite.color = _player_original_color
+		return
+	_attack_charge_timer += 1
+	_update_charge_visual()
+
+
+func _update_charge_visual() -> void:
+	var charged: bool = _attack_charge_timer >= charge_threshold_frames
+	var has_magic: bool = parry_subsystem.get_magic_stock() >= enhanced_attack_magic_cost
+	if charged and has_magic:
+		# Fully charged, magic available — pulsing gold (both blade and player)
+		var pulse: float = (sin(Engine.get_physics_frames() * 0.35) + 1.0) * 0.5
+		var gold: Color = Color(1.0, 0.85, 0.3 + 0.4 * pulse, 1.0)
+		blade_visual.color = gold
+		player_sprite.color = _player_original_color.lerp(gold, 0.6)
+	elif charged:
+		# Charged but no magic — dim gray (visual feedback that the spend would fail)
+		blade_visual.color = Color(0.55, 0.55, 0.6, 1.0)
+		player_sprite.color = _player_original_color.lerp(Color(0.55, 0.55, 0.6, 1.0), 0.4)
+	else:
+		# Building charge — gradient from neutral to warm
+		var t: float = float(_attack_charge_timer) / float(charge_threshold_frames)
+		var warm: Color = Color(1.0, 0.85, 0.5, 1.0)
+		blade_visual.color = _blade_original_color.lerp(warm, t)
+		player_sprite.color = _player_original_color.lerp(warm, t * 0.5)
+
+
+func _start_attack(enhanced: bool) -> void:
 	_is_attacking = true
+	_is_enhanced_attack = enhanced
 	_attack_timer = attack_hitbox_frames
 	_attack_targets_hit.clear()
-	# Position hitbox on facing side
 	var offset_x: float = 8.0 if _facing_right else -8.0
 	attack_shape.position = Vector2(offset_x, -7.0)
 	attack_hitbox.monitoring = true
 	animation_player.play("attack_swing")
 	attack_started.emit()
+	if enhanced:
+		_trigger_enhanced_visual()
+	else:
+		blade_visual.color = _blade_original_color
+		player_sprite.color = _player_original_color
+
+
+func _trigger_enhanced_visual() -> void:
+	# Brief screen flash via a CanvasLayer overlay
+	var canvas := CanvasLayer.new()
+	canvas.layer = 100
+	var flash := ColorRect.new()
+	flash.color = Color(1.0, 0.95, 0.6, 0.45)
+	flash.size = get_viewport_rect().size
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(flash)
+	get_tree().current_scene.add_child(canvas)
+	var flash_tween := create_tween()
+	flash_tween.tween_property(flash, "modulate:a", 0.0, 0.18)
+	flash_tween.tween_callback(canvas.queue_free)
+	# Bright blade flash that fades back to original
+	blade_visual.color = Color(1.0, 0.95, 0.4, 1.0)
+	var blade_tween := create_tween()
+	blade_tween.tween_property(blade_visual, "color", _blade_original_color, 0.4)
+	# Player sprite mirrors the bright flash and fades back
+	player_sprite.color = Color(1.0, 0.95, 0.4, 1.0)
+	var player_tween := create_tween()
+	player_tween.tween_property(player_sprite, "color", _player_original_color, 0.4)
 
 
 func _update_attack() -> void:
@@ -282,13 +379,15 @@ func _update_attack() -> void:
 		var target: Node = area.get_parent()
 		if target.has_method("take_damage"):
 			var combo: int = parry_subsystem.get_combo_count()
-			var multiplier: int = max(combo, 1)
-			target.take_damage(attack_damage * multiplier)
+			var combo_mult: int = max(combo, 1)
+			var enhanced_mult: int = enhanced_attack_damage_multiplier if _is_enhanced_attack else 1
+			target.take_damage(attack_damage * combo_mult * enhanced_mult)
 			_attack_targets_hit.append(area)
 			attack_hit.emit(target)
 	_attack_timer -= 1
 	if _attack_timer <= 0:
 		_is_attacking = false
+		_is_enhanced_attack = false
 		attack_hitbox.monitoring = false
 		_attack_cooldown_timer = attack_cooldown_frames
 

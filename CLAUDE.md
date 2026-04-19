@@ -11,8 +11,8 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.4 done.
-- **Next:** Story 2.5 (Magic Energy & Enhanced Attacks) — magic stocking already wired (`_magic_stock` increments on every parry); need the *spend* half: hold-attack input fires enhanced swing, consumes magic, distinct visual (blade glow + screen flash), falls back to normal attack if no magic.
+- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.5 done.
+- **Next:** Story 2.6 (Basic Enemy — Beetle Soldier). First real enemy with set attack patterns; replaces / supplements the dummy target. Will exercise the parry/combo/enhanced-attack systems against an opponent that actually moves.
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code

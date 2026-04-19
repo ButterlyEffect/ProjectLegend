@@ -17,7 +17,7 @@ size = Vector2(4, 4)
 size = Vector2(8, 14)
 
 [sub_resource type="RectangleShape2D" id="attack_hitbox_shape"]
-size = Vector2(12, 10)
+size = Vector2(20, 14)
 
 [sub_resource type="RectangleShape2D" id="player_hurtbox_shape"]
 size = Vector2(8, 14)

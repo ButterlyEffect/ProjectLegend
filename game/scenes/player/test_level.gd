@@ -5,12 +5,14 @@ extends Node2D
 @onready var player: CharacterBody2D = $Player
 @onready var throw_physics: Node = $Player/BladePivot/Blade/ThrowPhysics
 @onready var teleport_executor: Node = $Player/BladePivot/Blade/TeleportExecutor
+@onready var parry_subsystem: Node = $Player/ParrySubsystem
 @onready var player_health: Node = $Player/PlayerHealth
 @onready var kill_zone: Area2D = $KillZone
 @onready var moving_platform: AnimatableBody2D = $MovingPlatform
 
 var _range_indicator: Line2D
 var _platform_tween: Tween
+var _magic_label: Label
 
 
 func _ready() -> void:
@@ -36,6 +38,21 @@ func _ready() -> void:
 	_range_indicator.default_color = Color(1.0, 1.0, 0.6, 0.5)
 	_range_indicator.visible = false
 	add_child(_range_indicator)
+	_setup_magic_counter()
+
+
+func _setup_magic_counter() -> void:
+	var ui := CanvasLayer.new()
+	ui.layer = 50
+	add_child(ui)
+	_magic_label = Label.new()
+	_magic_label.text = "Magic: 0"
+	_magic_label.position = Vector2(8, 6)
+	_magic_label.add_theme_font_size_override("font_size", 10)
+	_magic_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
+	_magic_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_magic_label.add_theme_constant_override("outline_size", 4)
+	ui.add_child(_magic_label)
 
 
 func _physics_process(_delta: float) -> void:
@@ -55,6 +72,12 @@ func _physics_process(_delta: float) -> void:
 		throw_physics.recall()
 
 	_update_range_indicator()
+	_update_magic_counter()
+
+
+func _update_magic_counter() -> void:
+	if _magic_label and parry_subsystem:
+		_magic_label.text = "Magic: " + str(parry_subsystem.get_magic_stock())
 
 
 func _update_range_indicator() -> void:
