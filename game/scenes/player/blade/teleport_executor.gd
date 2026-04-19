@@ -35,6 +35,7 @@ func try_teleport() -> void:
 
 	# Can teleport to blade whether in flight or embedded
 	if _throw_physics.is_held():
+		print("Teleport ignored: blade is still held — throw it first")
 		return
 
 	var blade_pos: Vector2 = _throw_physics.get_blade_position()

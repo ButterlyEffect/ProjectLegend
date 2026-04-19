@@ -171,11 +171,22 @@ func _state_fall(delta: float) -> void:
 func _state_slide(delta: float) -> void:
 	_slide_timer -= delta
 	var dir: float = 1.0 if _facing_right else -1.0
+	var input: float = _get_move_input()
+	# Cancel slide if the player pulls the opposite direction — turn around feels responsive
+	if input != 0.0 and sign(input) != sign(dir):
+		_facing_right = input > 0
+		_change_state(STATE_RUN)
+		slide_ended.emit()
+		return
+	# Cancel slide into a jump
+	if _try_jump():
+		slide_ended.emit()
+		return
 	velocity.x = dir * slide_speed
 	velocity.y = 0.0 if is_on_floor() else velocity.y
 	_apply_gravity(delta)
 	if _slide_timer <= 0.0:
-		_change_state(STATE_IDLE if _get_move_input() == 0.0 else STATE_RUN)
+		_change_state(STATE_IDLE if input == 0.0 else STATE_RUN)
 		slide_ended.emit()
 
 
@@ -300,8 +311,14 @@ func _apply_friction(delta: float) -> void:
 func _apply_air_movement(delta: float) -> void:
 	var input_dir: float = _get_move_input()
 	if input_dir != 0.0:
-		velocity.x = move_toward(velocity.x, input_dir * max_speed, acceleration * delta * 0.8)
-		_facing_right = input_dir > 0
+		# Preserve dash-jump momentum — if already moving faster than max_speed
+		# in the direction held, don't decelerate (Mega Man X style)
+		var moving_with_input: bool = sign(velocity.x) == sign(input_dir)
+		if moving_with_input and absf(velocity.x) > max_speed:
+			_facing_right = input_dir > 0
+		else:
+			velocity.x = move_toward(velocity.x, input_dir * max_speed, acceleration * delta * 0.8)
+			_facing_right = input_dir > 0
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, friction * delta * 0.3)
 
