@@ -25,6 +25,7 @@ InputManager="*res://autoloads/input_manager.gd"
 AudioManager="*res://autoloads/audio_manager.gd"
 SaveManager="*res://autoloads/save_manager.gd"
 DiscoveryTracker="*res://autoloads/discovery_tracker.gd"
+ToolManager="*res://autoloads/tool_manager.gd"
 
 [debug]
 

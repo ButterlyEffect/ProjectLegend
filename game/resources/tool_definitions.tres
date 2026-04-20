@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="ToolDatabase" load_steps=5 format=3 uid="uid://btooldefs001"]
+
+[ext_resource type="Script" path="res://resources/tool_database.gd" id="1_db"]
+[ext_resource type="Script" path="res://resources/tool_definition.gd" id="2_def"]
+
+[sub_resource type="Resource" id="thumbtack_res"]
+script = ExtResource("2_def")
+id = &"thumbtack"
+display_name = "Thumbtack"
+max_durability = 10
+visual_color = Color(0.85, 0.85, 0.9, 1)
+description = "Sharp and pointy. Stabs, springboards, anchors to walls."
+
+[sub_resource type="Resource" id="penny_res"]
+script = ExtResource("2_def")
+id = &"penny"
+display_name = "Penny"
+max_durability = 8
+visual_color = Color(0.8, 0.45, 0.2, 1)
+description = "Flat and round. Shields from attacks, slides for transport."
+
+[sub_resource type="Resource" id="yarn_res"]
+script = ExtResource("2_def")
+id = &"yarn"
+display_name = "Yarn"
+max_durability = 12
+visual_color = Color(0.9, 0.35, 0.55, 1)
+description = "Long and flexible. Trips, grapples, lassos."
+
+[resource]
+script = ExtResource("1_db")
+tools = [SubResource("thumbtack_res"), SubResource("penny_res"), SubResource("yarn_res")]

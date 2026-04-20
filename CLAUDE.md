@@ -11,8 +11,9 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. **Epic 2 complete** (2.1–2.7). Combat, parry, combo, enhanced attacks, first real enemy, save/load — all shipped.
-- **Next:** Epic 3 begins with Story 3.1 (Tool Pickup & Inventory). Improvised tools (thumbtack, penny, yarn) — pickup from world, inventory tracking, slot-based selection. Note: stories 3.2–3.4 are heavier than usual (each defines 3 unique gameplay mechanics, 9 total).
+- **Implementation:** Epic 1 + Epic 2 complete. Epic 3 in progress — Story 3.1 done.
+- **Epic 3 restructure:** 3.2/3.3/3.4 split into 8 sub-stories (3.2a-c thumbtack mechanics, 3.3a-b penny mechanics, 3.4a-c yarn mechanics) per Epic 2 retro CP-1. Now 11 stories in Epic 3.
+- **Next:** Story 3.2a (Thumbtack — Stab). First tool use mechanic. Durability tick + imbue spec already locked via party mode review (see memory).
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code

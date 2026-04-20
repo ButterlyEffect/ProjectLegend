@@ -14,6 +14,9 @@ var _range_indicator: Line2D
 var _platform_tween: Tween
 var _magic_label: Label
 var _save_label: Label
+var _inventory_slots: Array[ColorRect] = []
+var _inventory_borders: Array[ColorRect] = []
+var _pickup_toast: Label
 
 
 func _ready() -> void:
@@ -41,6 +44,9 @@ func _ready() -> void:
 	add_child(_range_indicator)
 	_setup_magic_counter()
 	_setup_save_feedback()
+	_setup_inventory_ui()
+	ToolManager.tool_picked_up.connect(_on_tool_picked_up)
+	ToolManager.inventory_full.connect(_on_inventory_full)
 	# Auto-load any existing save and apply to player
 	if SaveManager.has_save():
 		var data: Dictionary = SaveManager.load_game()
@@ -92,6 +98,81 @@ func _flash_save_feedback(text: String) -> void:
 	var tween := create_tween()
 	tween.tween_interval(0.6)
 	tween.tween_property(_save_label, "modulate:a", 0.0, 0.4)
+
+
+func _setup_inventory_ui() -> void:
+	var ui := CanvasLayer.new()
+	ui.layer = 50
+	add_child(ui)
+	# Row of 3 slot squares in top-right of 480x270 viewport
+	var slot_size: int = 8
+	var spacing: int = 3
+	var row_right: int = 472  # x=480 viewport - 8 margin
+	var row_top: int = 6
+	for i in range(ToolManager.max_inventory_slots):
+		var x: int = row_right - (ToolManager.max_inventory_slots - i) * (slot_size + spacing) + spacing
+		# Border (behind slot) — used as active indicator
+		var border := ColorRect.new()
+		border.position = Vector2(x - 1, row_top - 1)
+		border.size = Vector2(slot_size + 2, slot_size + 2)
+		border.color = Color(1.0, 0.85, 0.3, 0.0)  # gold, hidden until active
+		ui.add_child(border)
+		_inventory_borders.append(border)
+		var slot := ColorRect.new()
+		slot.position = Vector2(x, row_top)
+		slot.size = Vector2(slot_size, slot_size)
+		slot.color = Color(0.15, 0.15, 0.15, 0.7)  # empty-slot gray
+		ui.add_child(slot)
+		_inventory_slots.append(slot)
+	# Pickup / inventory-full toast under the slots
+	_pickup_toast = Label.new()
+	_pickup_toast.text = ""
+	_pickup_toast.add_theme_font_size_override("font_size", 7)
+	_pickup_toast.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
+	_pickup_toast.add_theme_color_override("font_outline_color", Color.BLACK)
+	_pickup_toast.add_theme_constant_override("outline_size", 3)
+	_pickup_toast.anchor_left = 1.0
+	_pickup_toast.anchor_right = 1.0
+	_pickup_toast.offset_left = -80
+	_pickup_toast.offset_right = -4
+	_pickup_toast.offset_top = 18
+	_pickup_toast.offset_bottom = 30
+	_pickup_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_pickup_toast.modulate.a = 0.0
+	ui.add_child(_pickup_toast)
+
+
+func _refresh_inventory_ui() -> void:
+	var inv: Array[Dictionary] = ToolManager.get_inventory()
+	for i in range(_inventory_slots.size()):
+		if i < inv.size():
+			var def: ToolDefinition = ToolManager.get_definition(inv[i]["id"])
+			_inventory_slots[i].color = def.visual_color if def else Color.WHITE
+		else:
+			_inventory_slots[i].color = Color(0.15, 0.15, 0.15, 0.7)
+		# Active-slot indicator
+		var is_active: bool = (i == ToolManager.active_index)
+		_inventory_borders[i].color.a = 1.0 if is_active else 0.0
+
+
+func _flash_pickup_toast(text: String, color: Color) -> void:
+	_pickup_toast.text = text
+	_pickup_toast.add_theme_color_override("font_color", color)
+	_pickup_toast.modulate.a = 1.0
+	var tween := create_tween()
+	tween.tween_interval(0.8)
+	tween.tween_property(_pickup_toast, "modulate:a", 0.0, 0.4)
+
+
+func _on_tool_picked_up(tool_id: StringName) -> void:
+	var def: ToolDefinition = ToolManager.get_definition(tool_id)
+	var display: String = def.display_name if def else str(tool_id)
+	_flash_pickup_toast("picked up: " + display.to_lower(), Color(0.6, 1.0, 0.6, 1.0))
+	_refresh_inventory_ui()
+
+
+func _on_inventory_full() -> void:
+	_flash_pickup_toast("inventory full", Color(1.0, 0.5, 0.3, 1.0))
 
 
 func _physics_process(_delta: float) -> void:

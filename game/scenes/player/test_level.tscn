@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://hsk2rqmufqb" path="res://scenes/player/test_level.gd" id="2"]
 [ext_resource type="PackedScene" uid="uid://bdummytarget001" path="res://scenes/enemies/dummy_target.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://bbeetlesoldier001" path="res://scenes/enemies/beetle_soldier.tscn" id="4"]
+[ext_resource type="PackedScene" uid="uid://btoolpickup001" path="res://scenes/tools/tool_pickup.tscn" id="5"]
 
 [sub_resource type="RectangleShape2D" id="ground_shape"]
 size = Vector2(480, 16)
@@ -144,6 +145,22 @@ position = Vector2(160, 202)
 
 [node name="Beetle1" parent="." instance=ExtResource("4")]
 position = Vector2(260, 254)
+
+[node name="ThumbtackPickup" parent="." instance=ExtResource("5")]
+position = Vector2(120, 249)
+tool_id = &"thumbtack"
+
+[node name="PennyPickup" parent="." instance=ExtResource("5")]
+position = Vector2(340, 175)
+tool_id = &"penny"
+
+[node name="YarnPickup" parent="." instance=ExtResource("5")]
+position = Vector2(380, 105)
+tool_id = &"yarn"
+
+[node name="ExtraThumbtackPickup" parent="." instance=ExtResource("5")]
+position = Vector2(440, 249)
+tool_id = &"thumbtack"
 
 [node name="MovingPlatform" type="AnimatableBody2D" parent="."]
 position = Vector2(80, 190)
