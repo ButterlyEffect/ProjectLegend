@@ -92,6 +92,7 @@ func _ready() -> void:
 	_last_safe_position = global_position
 	_blade_original_color = blade_visual.color
 	_player_original_color = player_sprite.color
+	add_to_group("player")
 
 
 func _physics_process(delta: float) -> void:

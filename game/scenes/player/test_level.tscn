@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://bplayer001" path="res://scenes/player/player.tscn" id="1"]
 [ext_resource type="Script" uid="uid://hsk2rqmufqb" path="res://scenes/player/test_level.gd" id="2"]
 [ext_resource type="PackedScene" uid="uid://bdummytarget001" path="res://scenes/enemies/dummy_target.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://bbeetlesoldier001" path="res://scenes/enemies/beetle_soldier.tscn" id="4"]
 
 [sub_resource type="RectangleShape2D" id="ground_shape"]
 size = Vector2(480, 16)
@@ -140,6 +141,9 @@ position = Vector2(320, 254)
 
 [node name="Target3" parent="." instance=ExtResource("3")]
 position = Vector2(160, 202)
+
+[node name="Beetle1" parent="." instance=ExtResource("4")]
+position = Vector2(260, 254)
 
 [node name="MovingPlatform" type="AnimatableBody2D" parent="."]
 position = Vector2(80, 190)

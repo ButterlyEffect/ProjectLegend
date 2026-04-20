@@ -11,8 +11,8 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.5 done.
-- **Next:** Story 2.6 (Basic Enemy — Beetle Soldier). First real enemy with set attack patterns; replaces / supplements the dummy target. Will exercise the parry/combo/enhanced-attack systems against an opponent that actually moves.
+- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.6 done.
+- **Next:** Story 2.7 (Minimal Save/Load for Playtesting). Persist player position + trust stage so playtests don't restart from scratch. SaveManager autoload already exists; needs the actual write/read paths and atomic-write JSON.
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code
