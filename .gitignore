@@ -15,3 +15,6 @@ build/
 
 # MCP config
 .mcp.json
+
+# Claude permission grants — can capture secrets via approved Bash commands
+.claude/settings.local.json
