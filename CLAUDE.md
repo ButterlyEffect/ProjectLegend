@@ -11,8 +11,8 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 complete. Epic 2 in progress — Stories 2.1–2.6 done.
-- **Next:** Story 2.7 (Minimal Save/Load for Playtesting). Persist player position + trust stage so playtests don't restart from scratch. SaveManager autoload already exists; needs the actual write/read paths and atomic-write JSON.
+- **Implementation:** Epic 1 complete. **Epic 2 complete** (2.1–2.7). Combat, parry, combo, enhanced attacks, first real enemy, save/load — all shipped.
+- **Next:** Epic 3 begins with Story 3.1 (Tool Pickup & Inventory). Improvised tools (thumbtack, penny, yarn) — pickup from world, inventory tracking, slot-based selection. Note: stories 3.2–3.4 are heavier than usual (each defines 3 unique gameplay mechanics, 9 total).
 - **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
 
 ## Game Code

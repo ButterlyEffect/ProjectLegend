@@ -13,6 +13,7 @@ extends Node2D
 var _range_indicator: Line2D
 var _platform_tween: Tween
 var _magic_label: Label
+var _save_label: Label
 
 
 func _ready() -> void:
@@ -39,6 +40,12 @@ func _ready() -> void:
 	_range_indicator.visible = false
 	add_child(_range_indicator)
 	_setup_magic_counter()
+	_setup_save_feedback()
+	# Auto-load any existing save and apply to player
+	if SaveManager.has_save():
+		var data: Dictionary = SaveManager.load_game()
+		if SaveManager.apply_save_to_player(data, player):
+			print("Loaded save at ", player.global_position, " trust=", GameManager.current_trust_stage)
 
 
 func _setup_magic_counter() -> void:
@@ -53,6 +60,38 @@ func _setup_magic_counter() -> void:
 	_magic_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_magic_label.add_theme_constant_override("outline_size", 4)
 	ui.add_child(_magic_label)
+
+
+func _setup_save_feedback() -> void:
+	var ui := CanvasLayer.new()
+	ui.layer = 51
+	add_child(ui)
+	_save_label = Label.new()
+	_save_label.text = ""
+	_save_label.add_theme_font_size_override("font_size", 7)
+	_save_label.add_theme_color_override("font_color", Color(0.5, 1.0, 0.6, 1.0))
+	_save_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_save_label.add_theme_constant_override("outline_size", 3)
+	# Anchor to bottom-right of the 480x270 viewport
+	_save_label.anchor_left = 1.0
+	_save_label.anchor_right = 1.0
+	_save_label.anchor_top = 1.0
+	_save_label.anchor_bottom = 1.0
+	_save_label.offset_left = -42
+	_save_label.offset_top = -14
+	_save_label.offset_right = -4
+	_save_label.offset_bottom = -2
+	_save_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_save_label.modulate.a = 0.0
+	ui.add_child(_save_label)
+
+
+func _flash_save_feedback(text: String) -> void:
+	_save_label.text = text
+	_save_label.modulate.a = 1.0
+	var tween := create_tween()
+	tween.tween_interval(0.6)
+	tween.tween_property(_save_label, "modulate:a", 0.0, 0.4)
 
 
 func _physics_process(_delta: float) -> void:
@@ -73,6 +112,13 @@ func _physics_process(_delta: float) -> void:
 
 	_update_range_indicator()
 	_update_magic_counter()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_QUOTELEFT:
+			var ok: bool = SaveManager.save_game()
+			_flash_save_feedback("saved" if ok else "save failed")
 
 
 func _update_magic_counter() -> void:
