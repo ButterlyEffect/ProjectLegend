@@ -98,6 +98,9 @@ var _tool_use_timer: int = 0
 var _tool_cooldown_timer: int = 0
 var _tool_targets_hit: Array[Node2D] = []
 var _tool_use_damage: int = 0  # captured at tool-use start
+var _tool_durability_consumed_this_swing: bool = false
+var _use_tool_armed: bool = false  # primed on press, fires on release
+var _imbued_during_hold: bool = false  # cancels pending stab
 
 
 func _ready() -> void:
@@ -110,6 +113,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_detect_wall()
+	_try_imbue()  # Must run before parry_subsystem picks up the parry input
 	_try_attack()
 	_update_charging()
 	_update_attack()
@@ -407,21 +411,67 @@ func _update_attack() -> void:
 		_attack_cooldown_timer = attack_cooldown_frames
 
 
-# --- Tool use overlay ---
+# --- Tool imbue (hold use_tool + tap parry) ---
 
-func _try_use_tool() -> void:
-	if not Input.is_action_just_pressed("use_tool"):
+func _try_imbue() -> void:
+	if not Input.is_action_pressed("use_tool"):
 		return
-	if _is_using_tool or _tool_cooldown_timer > 0:
-		return
-	if _is_attacking or _is_charging:
-		return
-	if parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+	if not Input.is_action_just_pressed("parry"):
 		return
 	var def: ToolDefinition = ToolManager.get_active_definition()
 	if def == null:
-		return  # No tool active — silently no-op
-	# Dispatch by tool id; only thumbtack stab implemented in 3.2a
+		return
+	if parry_subsystem.get_magic_stock() < 1:
+		return
+	var combo: int = parry_subsystem.get_combo_count()
+	var restore_pct: float = _imbue_restore_percent_for_combo(combo)
+	if ToolManager.imbue_active_tool(restore_pct):
+		parry_subsystem.spend_magic(1)
+		_imbued_during_hold = true  # Cancel any pending stab on R2 release
+		_trigger_imbue_visual()
+
+
+func _imbue_restore_percent_for_combo(combo: int) -> float:
+	# Locked design from party mode review (see project_tool_imbue_spec memory)
+	match combo:
+		0: return 0.15
+		1: return 0.20
+		2: return 0.30
+		_: return 0.40
+
+
+func _trigger_imbue_visual() -> void:
+	# Player sprite gold flash; tool slot pulse handled by test_level via tool_imbued signal
+	player_sprite.color = Color(1.0, 0.85, 0.3, 1.0)
+	var tween := create_tween()
+	tween.tween_property(player_sprite, "color", _player_original_color, 0.4)
+
+
+# --- Tool use overlay ---
+
+func _try_use_tool() -> void:
+	# Press: arm a pending tool-use (stab fires on release if not cancelled)
+	if Input.is_action_just_pressed("use_tool"):
+		_imbued_during_hold = false
+		if _can_arm_tool_use():
+			_use_tool_armed = true
+		return
+	# Release: fire the pending tool-use unless imbue happened during the hold
+	if not Input.is_action_just_released("use_tool"):
+		return
+	var was_armed: bool = _use_tool_armed
+	_use_tool_armed = false
+	if _imbued_during_hold:
+		_imbued_during_hold = false
+		return
+	if not was_armed:
+		return
+	# Re-check gates at release time (state may have changed during the hold)
+	if not _can_arm_tool_use():
+		return
+	var def: ToolDefinition = ToolManager.get_active_definition()
+	if def == null:
+		return
 	match def.id:
 		&"thumbtack":
 			_start_thumbtack_stab()
@@ -430,16 +480,27 @@ func _try_use_tool() -> void:
 			pass
 
 
+func _can_arm_tool_use() -> bool:
+	if _is_using_tool or _tool_cooldown_timer > 0:
+		return false
+	if _is_attacking or _is_charging:
+		return false
+	if parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+		return false
+	if ToolManager.get_active_definition() == null:
+		return false
+	return true
+
+
 func _start_thumbtack_stab() -> void:
 	_is_using_tool = true
 	_tool_use_timer = thumbtack_stab_hitbox_frames
 	_tool_use_damage = thumbtack_stab_damage
 	_tool_targets_hit.clear()
+	_tool_durability_consumed_this_swing = false
 	var offset_x: float = 10.0 if _facing_right else -10.0
 	tool_shape.position = Vector2(offset_x, -7.0)
 	tool_hitbox.monitoring = true
-	# Decrement durability immediately on use; if it broke, ToolManager removes it
-	ToolManager.consume_active_tool_durability(1)
 
 
 func _update_tool_use() -> void:
@@ -452,6 +513,10 @@ func _update_tool_use() -> void:
 		if target.has_method("take_damage"):
 			target.take_damage(_tool_use_damage)
 			_tool_targets_hit.append(area)
+			# Durability ticks on first connecting hit per swing; whiffs are free
+			if not _tool_durability_consumed_this_swing:
+				ToolManager.consume_active_tool_durability(1)
+				_tool_durability_consumed_this_swing = true
 	_tool_use_timer -= 1
 	if _tool_use_timer <= 0:
 		_is_using_tool = false

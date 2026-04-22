@@ -50,6 +50,7 @@ func _ready() -> void:
 	ToolManager.inventory_full.connect(_on_inventory_full)
 	ToolManager.tool_broke.connect(_on_tool_broke)
 	ToolManager.tool_removed.connect(_on_tool_removed)
+	ToolManager.tool_imbued.connect(_on_tool_imbued)
 	# Auto-load any existing save and apply to player
 	if SaveManager.has_save():
 		var data: Dictionary = SaveManager.load_game()
@@ -204,6 +205,24 @@ func _on_tool_removed(tool_id: StringName) -> void:
 	var display: String = def.display_name if def else str(tool_id)
 	_flash_pickup_toast("dropped: " + display.to_lower(), Color(0.8, 0.8, 0.8, 1.0))
 	_refresh_inventory_ui()
+
+
+func _on_tool_imbued(tool_id: StringName, restored_amount: int) -> void:
+	var def: ToolDefinition = ToolManager.get_definition(tool_id)
+	var display: String = def.display_name if def else str(tool_id)
+	_flash_pickup_toast("imbued " + display.to_lower() + " +" + str(restored_amount), Color(1.0, 0.85, 0.3, 1.0))
+	_pulse_active_slot()
+	_refresh_inventory_ui()
+
+
+func _pulse_active_slot() -> void:
+	if ToolManager.active_index < 0 or ToolManager.active_index >= _inventory_slots.size():
+		return
+	var slot: ColorRect = _inventory_slots[ToolManager.active_index]
+	var original: Color = slot.color
+	slot.color = Color(1.0, 0.85, 0.3, 1.0)
+	var tween := create_tween()
+	tween.tween_property(slot, "color", original, 0.5)
 
 
 func _physics_process(_delta: float) -> void:

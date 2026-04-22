@@ -7,6 +7,7 @@ extends Node
 signal tool_picked_up(tool_id: StringName)
 signal tool_removed(tool_id: StringName)
 signal tool_broke(tool_id: StringName)
+signal tool_imbued(tool_id: StringName, restored_amount: int)
 signal inventory_full
 
 const DATABASE_PATH := "res://resources/tool_definitions.tres"
@@ -82,6 +83,29 @@ func get_active_definition() -> ToolDefinition:
 	if active.is_empty():
 		return null
 	return get_definition(active["id"])
+
+
+func imbue_active_tool(restore_percent: float) -> bool:
+	## Restores durability on the active tool by `restore_percent` of its max.
+	## Refuses (returns false) if no active tool, or if tool is already at max
+	## (no overcap per design spec). Caller is responsible for spending magic
+	## ONLY on success.
+	if active_index < 0 or active_index >= inventory.size():
+		return false
+	var def: ToolDefinition = get_active_definition()
+	if def == null:
+		return false
+	var current: int = inventory[active_index]["current_durability"]
+	if current >= def.max_durability:
+		return false  # No overcap
+	var restore_amount: int = int(round(def.max_durability * restore_percent))
+	if restore_amount <= 0:
+		restore_amount = 1  # Always restore at least 1 if any % was offered
+	var new_dur: int = min(current + restore_amount, def.max_durability)
+	var actually_restored: int = new_dur - current
+	inventory[active_index]["current_durability"] = new_dur
+	tool_imbued.emit(inventory[active_index]["id"], actually_restored)
+	return true
 
 
 func consume_active_tool_durability(amount: int = 1) -> bool:

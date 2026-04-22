@@ -68,6 +68,10 @@ func _physics_process(_delta: float) -> void:
 func _try_parry() -> void:
 	if not Input.is_action_just_pressed("parry"):
 		return
+	# If the player is holding use_tool and has an active tool, the parry
+	# input is reserved for imbue (handled in movement_controller._try_imbue)
+	if Input.is_action_pressed("use_tool") and ToolManager.get_active_definition() != null:
+		return
 	if _player.is_attacking() or _player.is_sliding():
 		return
 	_state = ParryState.WINDOW_OPEN

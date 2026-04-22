@@ -41,11 +41,16 @@ func _physics_process(delta: float) -> void:
 func take_damage(amount: int, damage_source_position: Vector2) -> void:
 	if _player.is_invincible():
 		return
+	# Race fix: if the parry window opened on the SAME frame as the enemy's
+	# damage check, _is_invincible may not be set yet depending on physics
+	# process order. Block damage if the parry window is currently open.
+	var parry: Node = _player.get_node_or_null("ParrySubsystem")
+	if parry and parry.has_method("is_parrying") and parry.is_parrying():
+		return
 	current_hp = max(current_hp - amount, 0)
 	player_damaged.emit(amount)
 	print("Player hit! HP: ", current_hp, "/", max_hp)
 	# Break the parry combo — flow state is interrupted by taking damage
-	var parry: Node = _player.get_node_or_null("ParrySubsystem")
 	if parry and parry.has_method("reset_combo"):
 		parry.reset_combo()
 	# i-frames
