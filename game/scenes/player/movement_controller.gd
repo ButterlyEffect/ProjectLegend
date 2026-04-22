@@ -61,6 +61,7 @@ const STATE_WALL_JUMP := &"wall_jump"
 @export var thumbtack_stab_hitbox_frames: int = 4  # Tighter than blade swing
 @export var thumbtack_stab_cooldown_frames: int = 18
 
+
 # --- Node references ---
 @onready var sprite: ColorRect = $Sprite2D
 @onready var blade_pivot: Node2D = $BladePivot
@@ -450,13 +451,12 @@ func _trigger_imbue_visual() -> void:
 # --- Tool use overlay ---
 
 func _try_use_tool() -> void:
-	# Press: arm a pending tool-use (stab fires on release if not cancelled)
+	# Press: arm a pending tool-use (default action fires on release if not cancelled)
 	if Input.is_action_just_pressed("use_tool"):
 		_imbued_during_hold = false
-		if _can_arm_tool_use():
-			_use_tool_armed = true
+		_use_tool_armed = _can_arm_tool_use()
 		return
-	# Release: fire the pending tool-use unless imbue happened during the hold
+	# Release: fire default action unless imbue happened during the hold
 	if not Input.is_action_just_released("use_tool"):
 		return
 	var was_armed: bool = _use_tool_armed
@@ -466,17 +466,16 @@ func _try_use_tool() -> void:
 		return
 	if not was_armed:
 		return
-	# Re-check gates at release time (state may have changed during the hold)
 	if not _can_arm_tool_use():
 		return
 	var def: ToolDefinition = ToolManager.get_active_definition()
 	if def == null:
 		return
+	# Default action per tool — pin/throw/etc. land in subsequent chunks
 	match def.id:
 		&"thumbtack":
 			_start_thumbtack_stab()
 		_:
-			# Other tools land in their own stories (3.3a/b, 3.4a/b/c)
 			pass
 
 
