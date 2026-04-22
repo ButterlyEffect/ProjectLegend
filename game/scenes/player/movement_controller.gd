@@ -60,6 +60,9 @@ const STATE_WALL_JUMP := &"wall_jump"
 @export var thumbtack_stab_damage: int = 2
 @export var thumbtack_stab_hitbox_frames: int = 4  # Tighter than blade swing
 @export var thumbtack_stab_cooldown_frames: int = 18
+@export var thumbtack_aim_threshold_frames: int = 8  # ~133ms hold to enter aim mode
+@export var thumbtack_aim_max_range: float = 80.0
+@export var thumbtack_aim_min_input: float = 0.3  # Stick magnitude to count as "aimed"
 
 
 # --- Node references ---
@@ -102,6 +105,9 @@ var _tool_use_damage: int = 0  # captured at tool-use start
 var _tool_durability_consumed_this_swing: bool = false
 var _use_tool_armed: bool = false  # primed on press, fires on release
 var _imbued_during_hold: bool = false  # cancels pending stab
+var _use_tool_hold_frames: int = 0
+var _aim_line: Line2D = null
+const THUMBTACK_PIN_SCENE := preload("res://scenes/tools/pinned_thumbtack.tscn")
 
 
 func _ready() -> void:
@@ -109,6 +115,16 @@ func _ready() -> void:
 	_blade_original_color = blade_visual.color
 	_player_original_color = player_sprite.color
 	add_to_group("player")
+	_setup_aim_line()
+
+
+func _setup_aim_line() -> void:
+	_aim_line = Line2D.new()
+	_aim_line.top_level = true  # Render in world space, not relative to player
+	_aim_line.width = 1.0
+	_aim_line.default_color = Color(1.0, 0.85, 0.3, 0.7)
+	_aim_line.visible = false
+	add_child(_aim_line)
 
 
 func _physics_process(delta: float) -> void:
@@ -451,16 +467,26 @@ func _trigger_imbue_visual() -> void:
 # --- Tool use overlay ---
 
 func _try_use_tool() -> void:
-	# Press: arm a pending tool-use (default action fires on release if not cancelled)
+	# Press: arm a pending tool-use (decides stab vs pin/throw on release)
 	if Input.is_action_just_pressed("use_tool"):
 		_imbued_during_hold = false
+		_use_tool_hold_frames = 0
 		_use_tool_armed = _can_arm_tool_use()
 		return
-	# Release: fire default action unless imbue happened during the hold
+	# While held: tick hold timer, show aim line once threshold passed
+	if Input.is_action_pressed("use_tool"):
+		if _use_tool_armed:
+			_use_tool_hold_frames += 1
+		_update_aim_line_visibility()
+		return
+	# Release: decide what to fire
 	if not Input.is_action_just_released("use_tool"):
 		return
 	var was_armed: bool = _use_tool_armed
+	var hold_frames: int = _use_tool_hold_frames
 	_use_tool_armed = false
+	_use_tool_hold_frames = 0
+	_aim_line.visible = false
 	if _imbued_during_hold:
 		_imbued_during_hold = false
 		return
@@ -471,12 +497,61 @@ func _try_use_tool() -> void:
 	var def: ToolDefinition = ToolManager.get_active_definition()
 	if def == null:
 		return
-	# Default action per tool — pin/throw/etc. land in subsequent chunks
-	match def.id:
-		&"thumbtack":
-			_start_thumbtack_stab()
-		_:
+	# Tap (held shorter than threshold) → default action
+	if hold_frames < thumbtack_aim_threshold_frames:
+		match def.id:
+			&"thumbtack":
+				_start_thumbtack_stab()
+			_:
+				pass
+		return
+	# Hold past threshold → place at feet (no aim) or throw (aimed)
+	var aim: Vector2 = _read_aim_input()
+	if def.id == &"thumbtack":
+		if aim.length() < thumbtack_aim_min_input:
+			_thumbtack_pin_at_feet()
+		else:
+			# Throw lands in chunk 3 (3.2c)
 			pass
+
+
+func _read_aim_input() -> Vector2:
+	# Use the existing 8-way snapped aim from InputManager (left stick / WASD / arrows)
+	return InputManager.get_aim_direction()
+
+
+func _update_aim_line_visibility() -> void:
+	if _aim_line == null:
+		return
+	var def: ToolDefinition = ToolManager.get_active_definition()
+	if not _use_tool_armed or def == null or def.id != &"thumbtack":
+		_aim_line.visible = false
+		return
+	if _use_tool_hold_frames < thumbtack_aim_threshold_frames:
+		_aim_line.visible = false
+		return
+	var aim: Vector2 = _read_aim_input()
+	_aim_line.visible = true
+	_aim_line.clear_points()
+	_aim_line.add_point(global_position)
+	if aim.length() < thumbtack_aim_min_input:
+		# No aim input — visualize a tiny down-tick to suggest "place at feet"
+		_aim_line.add_point(global_position + Vector2(0, 6))
+	else:
+		_aim_line.add_point(global_position + aim * thumbtack_aim_max_range)
+
+
+func _thumbtack_pin_at_feet() -> void:
+	var active: Dictionary = ToolManager.get_active_tool()
+	if active.is_empty():
+		return
+	# Spawn the pin at the player's feet using the tool's remaining durability
+	var pin := THUMBTACK_PIN_SCENE.instantiate()
+	pin.current_durability = active["current_durability"]
+	pin.global_position = global_position + Vector2(0, 0)
+	get_tree().current_scene.add_child(pin)
+	# Remove the thumbtack from inventory (the pin now owns the durability)
+	ToolManager.remove_active_tool()
 
 
 func _can_arm_tool_use() -> bool:
