@@ -6,6 +6,7 @@ extends Node
 
 signal tool_picked_up(tool_id: StringName)
 signal tool_removed(tool_id: StringName)
+signal tool_broke(tool_id: StringName)
 signal inventory_full
 
 const DATABASE_PATH := "res://resources/tool_definitions.tres"
@@ -74,3 +75,27 @@ func cycle_active() -> void:
 
 func get_definition(tool_id: StringName) -> ToolDefinition:
 	return database.get_tool(tool_id) if database else null
+
+
+func get_active_definition() -> ToolDefinition:
+	var active: Dictionary = get_active_tool()
+	if active.is_empty():
+		return null
+	return get_definition(active["id"])
+
+
+func consume_active_tool_durability(amount: int = 1) -> bool:
+	## Decrements active tool's durability. Returns true if the tool broke.
+	if active_index < 0 or active_index >= inventory.size():
+		return false
+	inventory[active_index]["current_durability"] -= amount
+	if inventory[active_index]["current_durability"] <= 0:
+		var broken_id: StringName = inventory[active_index]["id"]
+		inventory.remove_at(active_index)
+		if inventory.is_empty():
+			active_index = -1
+		else:
+			active_index = clamp(active_index, 0, inventory.size() - 1)
+		tool_broke.emit(broken_id)
+		return true
+	return false

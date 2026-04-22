@@ -19,6 +19,9 @@ size = Vector2(8, 14)
 [sub_resource type="RectangleShape2D" id="attack_hitbox_shape"]
 size = Vector2(20, 14)
 
+[sub_resource type="RectangleShape2D" id="tool_hitbox_shape"]
+size = Vector2(14, 8)
+
 [sub_resource type="RectangleShape2D" id="player_hurtbox_shape"]
 size = Vector2(8, 14)
 
@@ -104,6 +107,16 @@ monitorable = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
 position = Vector2(8, -7)
 shape = SubResource("attack_hitbox_shape")
+
+[node name="ToolHitbox" type="Area2D" parent="."]
+collision_layer = 8
+collision_mask = 16
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ToolHitbox"]
+position = Vector2(10, -7)
+shape = SubResource("tool_hitbox_shape")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {

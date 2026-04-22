@@ -56,12 +56,19 @@ const STATE_WALL_JUMP := &"wall_jump"
 @export var enhanced_attack_damage_multiplier: int = 2
 @export var enhanced_attack_magic_cost: int = 1
 
+@export_group("Tool — Thumbtack")
+@export var thumbtack_stab_damage: int = 2
+@export var thumbtack_stab_hitbox_frames: int = 4  # Tighter than blade swing
+@export var thumbtack_stab_cooldown_frames: int = 18
+
 # --- Node references ---
 @onready var sprite: ColorRect = $Sprite2D
 @onready var blade_pivot: Node2D = $BladePivot
 @onready var throw_physics: Node = $BladePivot/Blade/ThrowPhysics
 @onready var attack_hitbox: Area2D = $AttackHitbox
 @onready var attack_shape: CollisionShape2D = $AttackHitbox/CollisionShape2D
+@onready var tool_hitbox: Area2D = $ToolHitbox
+@onready var tool_shape: CollisionShape2D = $ToolHitbox/CollisionShape2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var parry_subsystem: Node2D = $ParrySubsystem
 @onready var blade_visual: ColorRect = $BladePivot/Blade/ThrowPhysics/BladeVisual
@@ -86,6 +93,11 @@ var _attack_charge_timer: int = 0
 var _is_enhanced_attack: bool = false
 var _blade_original_color: Color
 var _player_original_color: Color
+var _is_using_tool: bool = false
+var _tool_use_timer: int = 0
+var _tool_cooldown_timer: int = 0
+var _tool_targets_hit: Array[Node2D] = []
+var _tool_use_damage: int = 0  # captured at tool-use start
 
 
 func _ready() -> void:
@@ -101,6 +113,8 @@ func _physics_process(delta: float) -> void:
 	_try_attack()
 	_update_charging()
 	_update_attack()
+	_try_use_tool()
+	_update_tool_use()
 
 	match _current_state:
 		STATE_IDLE:
@@ -393,6 +407,58 @@ func _update_attack() -> void:
 		_attack_cooldown_timer = attack_cooldown_frames
 
 
+# --- Tool use overlay ---
+
+func _try_use_tool() -> void:
+	if not Input.is_action_just_pressed("use_tool"):
+		return
+	if _is_using_tool or _tool_cooldown_timer > 0:
+		return
+	if _is_attacking or _is_charging:
+		return
+	if parry_subsystem.is_parrying() or parry_subsystem.is_in_recovery() or parry_subsystem.is_in_slowmo():
+		return
+	var def: ToolDefinition = ToolManager.get_active_definition()
+	if def == null:
+		return  # No tool active — silently no-op
+	# Dispatch by tool id; only thumbtack stab implemented in 3.2a
+	match def.id:
+		&"thumbtack":
+			_start_thumbtack_stab()
+		_:
+			# Other tools land in their own stories (3.3a/b, 3.4a/b/c)
+			pass
+
+
+func _start_thumbtack_stab() -> void:
+	_is_using_tool = true
+	_tool_use_timer = thumbtack_stab_hitbox_frames
+	_tool_use_damage = thumbtack_stab_damage
+	_tool_targets_hit.clear()
+	var offset_x: float = 10.0 if _facing_right else -10.0
+	tool_shape.position = Vector2(offset_x, -7.0)
+	tool_hitbox.monitoring = true
+	# Decrement durability immediately on use; if it broke, ToolManager removes it
+	ToolManager.consume_active_tool_durability(1)
+
+
+func _update_tool_use() -> void:
+	if not _is_using_tool:
+		return
+	for area in tool_hitbox.get_overlapping_areas():
+		if area in _tool_targets_hit:
+			continue
+		var target: Node = area.get_parent()
+		if target.has_method("take_damage"):
+			target.take_damage(_tool_use_damage)
+			_tool_targets_hit.append(area)
+	_tool_use_timer -= 1
+	if _tool_use_timer <= 0:
+		_is_using_tool = false
+		tool_hitbox.monitoring = false
+		_tool_cooldown_timer = thumbtack_stab_cooldown_frames
+
+
 # --- Helpers ---
 
 func _get_move_input() -> float:
@@ -467,6 +533,8 @@ func _update_timers(delta: float) -> void:
 		_slide_cooldown_timer -= delta
 	if _attack_cooldown_timer > 0:
 		_attack_cooldown_timer -= 1
+	if _tool_cooldown_timer > 0:
+		_tool_cooldown_timer -= 1
 
 
 func _update_safe_position() -> void:

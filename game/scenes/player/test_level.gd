@@ -16,6 +16,7 @@ var _magic_label: Label
 var _save_label: Label
 var _inventory_slots: Array[ColorRect] = []
 var _inventory_borders: Array[ColorRect] = []
+var _inventory_durability_labels: Array[Label] = []
 var _pickup_toast: Label
 
 
@@ -47,6 +48,8 @@ func _ready() -> void:
 	_setup_inventory_ui()
 	ToolManager.tool_picked_up.connect(_on_tool_picked_up)
 	ToolManager.inventory_full.connect(_on_inventory_full)
+	ToolManager.tool_broke.connect(_on_tool_broke)
+	ToolManager.tool_removed.connect(_on_tool_removed)
 	# Auto-load any existing save and apply to player
 	if SaveManager.has_save():
 		var data: Dictionary = SaveManager.load_game()
@@ -124,6 +127,18 @@ func _setup_inventory_ui() -> void:
 		slot.color = Color(0.15, 0.15, 0.15, 0.7)  # empty-slot gray
 		ui.add_child(slot)
 		_inventory_slots.append(slot)
+		# Durability number sits below the slot
+		var dur := Label.new()
+		dur.text = ""
+		dur.add_theme_font_size_override("font_size", 6)
+		dur.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.9))
+		dur.add_theme_color_override("font_outline_color", Color.BLACK)
+		dur.add_theme_constant_override("outline_size", 2)
+		dur.position = Vector2(x - 1, row_top + slot_size + 1)
+		dur.size = Vector2(slot_size + 2, 8)
+		dur.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ui.add_child(dur)
+		_inventory_durability_labels.append(dur)
 	# Pickup / inventory-full toast under the slots
 	_pickup_toast = Label.new()
 	_pickup_toast.text = ""
@@ -148,8 +163,10 @@ func _refresh_inventory_ui() -> void:
 		if i < inv.size():
 			var def: ToolDefinition = ToolManager.get_definition(inv[i]["id"])
 			_inventory_slots[i].color = def.visual_color if def else Color.WHITE
+			_inventory_durability_labels[i].text = str(inv[i]["current_durability"])
 		else:
 			_inventory_slots[i].color = Color(0.15, 0.15, 0.15, 0.7)
+			_inventory_durability_labels[i].text = ""
 		# Active-slot indicator
 		var is_active: bool = (i == ToolManager.active_index)
 		_inventory_borders[i].color.a = 1.0 if is_active else 0.0
@@ -175,6 +192,20 @@ func _on_inventory_full() -> void:
 	_flash_pickup_toast("inventory full", Color(1.0, 0.5, 0.3, 1.0))
 
 
+func _on_tool_broke(tool_id: StringName) -> void:
+	var def: ToolDefinition = ToolManager.get_definition(tool_id)
+	var display: String = def.display_name if def else str(tool_id)
+	_flash_pickup_toast(display.to_lower() + " broke!", Color(1.0, 0.4, 0.4, 1.0))
+	_refresh_inventory_ui()
+
+
+func _on_tool_removed(tool_id: StringName) -> void:
+	var def: ToolDefinition = ToolManager.get_definition(tool_id)
+	var display: String = def.display_name if def else str(tool_id)
+	_flash_pickup_toast("dropped: " + display.to_lower(), Color(0.8, 0.8, 0.8, 1.0))
+	_refresh_inventory_ui()
+
+
 func _physics_process(_delta: float) -> void:
 	# Blade throw input — hold to aim, release to throw
 	if Input.is_action_just_released("throw_blade") and throw_physics.is_held():
@@ -193,6 +224,11 @@ func _physics_process(_delta: float) -> void:
 
 	_update_range_indicator()
 	_update_magic_counter()
+	if Input.is_action_just_pressed("swap_tool"):
+		ToolManager.cycle_active()
+	if Input.is_action_just_pressed("drop_tool"):
+		ToolManager.remove_active_tool()
+	_refresh_inventory_ui()
 
 
 func _unhandled_input(event: InputEvent) -> void:
