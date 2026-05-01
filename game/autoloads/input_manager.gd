@@ -41,5 +41,18 @@ func get_aim_direction() -> Vector2:
 	return Vector2.from_angle(snapped_angle).normalized()
 
 
+## Get full 360° analog aim direction. Returns Vector2.ZERO if below deadzone,
+## otherwise the raw normalized stick vector. Use for tool aiming where the
+## player wants pinpoint control instead of 8-way snap.
+func get_aim_direction_analog() -> Vector2:
+	var raw: Vector2 = Vector2(
+		Input.get_axis("move_left", "move_right"),
+		Input.get_axis("move_up", "move_down")
+	)
+	if raw.length() < 0.3:
+		return Vector2.ZERO
+	return raw.normalized()
+
+
 func is_using_controller() -> bool:
 	return active_device == DEVICE_CONTROLLER

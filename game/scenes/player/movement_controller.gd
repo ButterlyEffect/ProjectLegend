@@ -105,9 +105,11 @@ var _tool_use_damage: int = 0  # captured at tool-use start
 var _tool_durability_consumed_this_swing: bool = false
 var _use_tool_armed: bool = false  # primed on press, fires on release
 var _imbued_during_hold: bool = false  # cancels pending stab
+var _use_tool_cancelled: bool = false  # cancels pending stab/pin/throw via slide tap mid-aim
 var _use_tool_hold_frames: int = 0
 var _aim_line: Line2D = null
 const THUMBTACK_PIN_SCENE := preload("res://scenes/tools/pinned_thumbtack.tscn")
+const THUMBTACK_THROWN_SCENE := preload("res://scenes/tools/thrown_thumbtack.tscn")
 
 
 func _ready() -> void:
@@ -470,13 +472,19 @@ func _try_use_tool() -> void:
 	# Press: arm a pending tool-use (decides stab vs pin/throw on release)
 	if Input.is_action_just_pressed("use_tool"):
 		_imbued_during_hold = false
+		_use_tool_cancelled = false
 		_use_tool_hold_frames = 0
 		_use_tool_armed = _can_arm_tool_use()
 		return
-	# While held: tick hold timer, show aim line once threshold passed
+	# While held: tick hold timer, show aim line once threshold passed,
+	# allow cancel via any other action press once aiming has begun
+	# (slide / throw_blade / attack — parry is reserved for imbue).
 	if Input.is_action_pressed("use_tool"):
 		if _use_tool_armed:
 			_use_tool_hold_frames += 1
+			if _is_aiming() and _aim_cancel_pressed():
+				_use_tool_cancelled = true
+				_aim_line.visible = false
 		_update_aim_line_visibility()
 		return
 	# Release: decide what to fire
@@ -484,11 +492,15 @@ func _try_use_tool() -> void:
 		return
 	var was_armed: bool = _use_tool_armed
 	var hold_frames: int = _use_tool_hold_frames
+	var was_cancelled: bool = _use_tool_cancelled
 	_use_tool_armed = false
 	_use_tool_hold_frames = 0
+	_use_tool_cancelled = false
 	_aim_line.visible = false
 	if _imbued_during_hold:
 		_imbued_during_hold = false
+		return
+	if was_cancelled:
 		return
 	if not was_armed:
 		return
@@ -511,13 +523,12 @@ func _try_use_tool() -> void:
 		if aim.length() < thumbtack_aim_min_input:
 			_thumbtack_pin_at_feet()
 		else:
-			# Throw lands in chunk 3 (3.2c)
-			pass
+			_thumbtack_throw(aim)
 
 
 func _read_aim_input() -> Vector2:
-	# Use the existing 8-way snapped aim from InputManager (left stick / WASD / arrows)
-	return InputManager.get_aim_direction()
+	# Full 360° analog aim — movement is locked while aiming, so the stick is free.
+	return InputManager.get_aim_direction_analog()
 
 
 func _update_aim_line_visibility() -> void:
@@ -527,21 +538,27 @@ func _update_aim_line_visibility() -> void:
 	if not _use_tool_armed or def == null or def.id != &"thumbtack":
 		_aim_line.visible = false
 		return
+	if _use_tool_cancelled:
+		_aim_line.visible = false
+		return
 	if _use_tool_hold_frames < thumbtack_aim_threshold_frames:
 		_aim_line.visible = false
 		return
 	var aim: Vector2 = _read_aim_input()
+	if aim.length() < thumbtack_aim_min_input:
+		# No throwable direction — hide the line. Release will pin at feet (if grounded).
+		_aim_line.visible = false
+		return
 	_aim_line.visible = true
 	_aim_line.clear_points()
 	_aim_line.add_point(global_position)
-	if aim.length() < thumbtack_aim_min_input:
-		# No aim input — visualize a tiny down-tick to suggest "place at feet"
-		_aim_line.add_point(global_position + Vector2(0, 6))
-	else:
-		_aim_line.add_point(global_position + aim * thumbtack_aim_max_range)
+	_aim_line.add_point(global_position + aim * thumbtack_aim_max_range)
 
 
 func _thumbtack_pin_at_feet() -> void:
+	# Springboard requires a ground to pin into — airborne no-op (tack stays in inventory).
+	if not is_on_floor():
+		return
 	var active: Dictionary = ToolManager.get_active_tool()
 	if active.is_empty():
 		return
@@ -551,6 +568,18 @@ func _thumbtack_pin_at_feet() -> void:
 	pin.global_position = global_position + Vector2(0, 0)
 	get_tree().current_scene.add_child(pin)
 	# Remove the thumbtack from inventory (the pin now owns the durability)
+	ToolManager.remove_active_tool()
+
+
+func _thumbtack_throw(aim: Vector2) -> void:
+	var active: Dictionary = ToolManager.get_active_tool()
+	if active.is_empty():
+		return
+	var projectile := THUMBTACK_THROWN_SCENE.instantiate()
+	projectile.global_position = global_position
+	get_tree().current_scene.add_child(projectile)
+	projectile.launch(aim, active["current_durability"])
+	# Tack leaves inventory at throw — the projectile (and any pin it spawns) owns durability
 	ToolManager.remove_active_tool()
 
 
@@ -601,6 +630,10 @@ func _update_tool_use() -> void:
 # --- Helpers ---
 
 func _get_move_input() -> float:
+	# While aiming a tool the stick is repurposed for aim — lock horizontal movement
+	# so the player stands still and the stick controls only the throw direction.
+	if _is_aiming():
+		return 0.0
 	return Input.get_axis("move_left", "move_right")
 
 
@@ -640,12 +673,32 @@ func _try_jump() -> bool:
 
 
 func _try_slide() -> bool:
+	# Suppress slide while aiming a tool — the slide press is the cancel gesture.
+	if _is_aiming():
+		return false
+	# Same cancel gesture for blade throw aim — don't slide while the player is mid-aim.
+	if Input.is_action_pressed("throw_blade") and throw_physics.is_held():
+		return false
 	if Input.is_action_just_pressed("slide") and is_on_floor() and _slide_cooldown_timer <= 0.0:
 		if parry_subsystem.is_in_recovery():
 			return false
 		_change_state(STATE_SLIDE)
 		return true
 	return false
+
+
+func _is_aiming() -> bool:
+	return _use_tool_armed and _use_tool_hold_frames >= thumbtack_aim_threshold_frames
+
+
+func _aim_cancel_pressed() -> bool:
+	# Any "other action" pressed mid-aim cancels the pending throw/pin.
+	# Parry is excluded because hold-R2 + tap-R1 is the imbue gesture.
+	return (
+		Input.is_action_just_pressed("slide")
+		or Input.is_action_just_pressed("throw_blade")
+		or Input.is_action_just_pressed("attack")
+	)
 
 
 func _detect_wall() -> int:

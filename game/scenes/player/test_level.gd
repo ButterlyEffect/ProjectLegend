@@ -18,6 +18,7 @@ var _inventory_slots: Array[ColorRect] = []
 var _inventory_borders: Array[ColorRect] = []
 var _inventory_durability_labels: Array[Label] = []
 var _pickup_toast: Label
+var _blade_throw_cancelled: bool = false
 
 
 func _ready() -> void:
@@ -226,12 +227,21 @@ func _pulse_active_slot() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	# Blade throw input — hold to aim, release to throw
+	# Blade throw input — hold to aim, release to throw, slide (B) to cancel mid-aim
+	if Input.is_action_just_pressed("throw_blade") and throw_physics.is_held():
+		_blade_throw_cancelled = false
+	if Input.is_action_pressed("throw_blade") and throw_physics.is_held():
+		if _blade_aim_cancel_pressed():
+			_blade_throw_cancelled = true
+			_range_indicator.visible = false
 	if Input.is_action_just_released("throw_blade") and throw_physics.is_held():
-		var aim: Vector2 = InputManager.get_aim_direction()
-		if aim == Vector2.ZERO:
-			aim = player.get_facing_direction()
-		throw_physics.throw_blade(aim)
+		var was_cancelled: bool = _blade_throw_cancelled
+		_blade_throw_cancelled = false
+		if not was_cancelled:
+			var aim: Vector2 = InputManager.get_aim_direction_analog()
+			if aim == Vector2.ZERO:
+				aim = player.get_facing_direction()
+			throw_physics.throw_blade(aim)
 
 	# Teleport input
 	if Input.is_action_just_pressed("teleport"):
@@ -250,6 +260,16 @@ func _physics_process(_delta: float) -> void:
 	_refresh_inventory_ui()
 
 
+func _blade_aim_cancel_pressed() -> bool:
+	# Any "other action" pressed mid-aim cancels the pending blade throw.
+	return (
+		Input.is_action_just_pressed("slide")
+		or Input.is_action_just_pressed("use_tool")
+		or Input.is_action_just_pressed("attack")
+		or Input.is_action_just_pressed("parry")
+	)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_QUOTELEFT:
@@ -266,7 +286,10 @@ func _update_range_indicator() -> void:
 	if not throw_physics.is_held() or not Input.is_action_pressed("throw_blade"):
 		_range_indicator.visible = false
 		return
-	var aim: Vector2 = InputManager.get_aim_direction()
+	if _blade_throw_cancelled:
+		_range_indicator.visible = false
+		return
+	var aim: Vector2 = InputManager.get_aim_direction_analog()
 	if aim == Vector2.ZERO:
 		aim = player.get_facing_direction()
 	_range_indicator.visible = true

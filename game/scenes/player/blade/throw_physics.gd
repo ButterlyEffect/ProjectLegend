@@ -28,7 +28,6 @@ var _start_position: Vector2 = Vector2.ZERO
 var _distance_traveled: float = 0.0
 var _player: CharacterBody2D = null
 var _world_position: Vector2 = Vector2.ZERO  # Blade position in world space
-var _initial_velocity: Vector2 = Vector2.ZERO  # Player velocity at time of throw
 
 
 func _ready() -> void:
@@ -45,9 +44,7 @@ func _physics_process(delta: float) -> void:
 		set_physics_process(false)
 		return
 
-	# Blade moves at throw_speed in throw direction, plus player's velocity at time of throw
-	var blade_velocity: Vector2 = _throw_direction * throw_speed + _initial_velocity
-	var movement: Vector2 = blade_velocity * delta
+	var movement: Vector2 = _throw_direction * throw_speed * delta
 	var prev_position: Vector2 = _world_position
 	_world_position += movement
 	_distance_traveled += movement.length()
@@ -71,9 +68,7 @@ func throw_blade(direction: Vector2) -> void:
 	if _current_state != STATE_HELD:
 		return
 	_throw_direction = direction.normalized()
-	# Start from the player's current world position
 	_world_position = _player.global_position
-	_initial_velocity = _player.velocity  # Inherit player momentum
 	_start_position = _world_position
 	_distance_traveled = 0.0
 	_change_state(STATE_IN_FLIGHT)

@@ -11,11 +11,11 @@
 
 ## Current Status
 - **Planning:** Complete (brief, PRD, architecture, epics)
-- **Implementation:** Epic 1 + Epic 2 complete. Epic 3 in progress — Stories 3.1, 3.2a, 3.2b done. Magic imbue interlude shipped.
+- **Implementation:** Epic 1 + Epic 2 complete. Epic 3 in progress — Stories 3.1, 3.2a, 3.2b, 3.2c done. Magic imbue interlude shipped.
 - **Epic 3 restructure:** 3.2/3.3/3.4 split into 8 sub-stories per Epic 2 retro CP-1. Now 11 stories in Epic 3.
-- **Tool input model:** Tap R2 = default action (stab); hold R2 past ~133ms = aim mode (yellow line); release with no aim = pin at feet; release with aim = throw (3.2c). Hold R2 + tap R1 = imbue (unchanged).
-- **Next:** Story 3.2c (Thumbtack — Wall Anchor). Throw thumbtack at a wall, it sticks, becomes a standable platform.
-- **Hold-to-aim throw:** E held = range indicator shows, release = blade throws (changed from tap-to-throw)
+- **Tool input model:** Tap R2 = default action (stab); hold R2 past ~133ms = aim mode (yellow line, full 360° analog); release with no aim = pin at feet; release with aim = throw. Hold R2 + tap R1 = imbue. Mid-aim cancel = slide / throw_blade / attack press (parry excluded — reserved for imbue).
+- **Blade aim parity (2026-05-01):** Blade throw also uses 360° analog aim and is cancellable mid-hold by slide/use_tool/attack/parry. Velocity inheritance removed — blade flies straight at fixed throw_speed regardless of player motion.
+- **Next:** Story 3.3a (Penny — Shield). Defensive use of penny tool blocks incoming damage from facing direction.
 
 ## Game Code
 - Located in `game/` subfolder (Godot 4.x project)
